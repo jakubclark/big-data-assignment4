@@ -145,14 +145,17 @@ def plot_price_heatmap(df: pd.DataFrame):
         lon = props['LONGITUDE']
         lat = props['LATITUDE']
         value = props['PRICE']
+
+        lon = round(lon, 3)
+        lat = round(lat, 3)
         key = (lon, lat)
+
         if key in data.keys():
             data[key].append(value)
         else:
             data[key] = [value]
     x = []
     y = []
-
     c = []
 
     for coords, prices in data.items():
@@ -168,10 +171,10 @@ def plot_price_heatmap(df: pd.DataFrame):
     plt.xlabel('Longitude')
     plt.ylabel('Latitude')
 
-    plt.scatter(x, y, s=0.1, c=c)
+    plt.scatter(x, y, s=1, c=c, marker='H')
 
-    plt.show()
     plt.savefig('mean_price_by_coordinate.pdf')
+    plt.show()
 
 
 def plot_count_heatmap(df: pd.DataFrame):
