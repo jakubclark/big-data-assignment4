@@ -98,27 +98,29 @@ def plot_area_by_neighbourhood(df: pd.DataFrame):
         living_gba = living_gba.dropna()
         mean[neighbourhood] = living_gba.mean()
 
-    y_pos = np.arange(len(nbhd_labels))
+    x_pos = np.arange(len(nbhd_labels))
 
     mean_areas = [mean[nbhd] for nbhd in nbhd_labels]
 
     fig, ax = plt.subplots()
 
-    ax.barh(y_pos, mean_areas, align='center')
+    ax.bar(x_pos, mean_areas)
 
     ax.set_axisbelow(True)
     ax.grid(linestyle='-', linewidth='0.5', color='black', which='both')
 
-    minor_xticks = np.arange(0, 3000, 100)
-    major_xticks = np.arange(0, 3000, 100)
-    ax.set_xticks(major_xticks)
-    ax.set_xticks(minor_xticks, minor=True)
+    minor_yticks = np.arange(0, 3000, 100)
+    major_yticks = np.arange(0, 3000, 100)
+    ax.set_yticks(major_yticks)
+    ax.set_yticks(minor_yticks, minor=True)
 
-    ax.set_yticks(y_pos)
-    ax.set_yticklabels(nbhd_labels)
+    ax.set_xticks(x_pos)
+    ax.set_xticklabels(nbhd_labels)
 
-    ax.set_xlabel('Mean Area (Sq Ft)')
-    ax.set_ylabel('Sub Neighbourhood')
+    plt.xticks(rotation=45)
+
+    ax.set_xlabel('Sub Neighbourhood')
+    ax.set_ylabel('Mean Area (Sq Ft)')
     ax.set_title('Mean Area By Neighbourhood')
 
     fig.savefig('mean_area_by_neighbourhood.pdf')
@@ -251,12 +253,12 @@ def plot_count_heatmap(df: pd.DataFrame):
 
 def main():
     df = pd.read_csv('DC_Properties.csv')
-    plot_price_by_grade(df)
-    plot_price_by_quadrant(df)
+    #plot_price_by_grade(df)
+    #plot_price_by_quadrant(df)
     plot_area_by_neighbourhood(df)
-    plot_price_over_time(df)
-    plot_price_heatmap(df)
-    plot_count_heatmap(df)
+    #plot_price_over_time(df)
+    #plot_price_heatmap(df)
+    #plot_count_heatmap(df)
 
 
 if __name__ == '__main__':
