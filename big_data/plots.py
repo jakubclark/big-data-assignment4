@@ -253,12 +253,12 @@ def plot_count_heatmap(df: pd.DataFrame):
 
 def main():
     df = pd.read_csv('DC_Properties.csv')
-    #plot_price_by_grade(df)
-    #plot_price_by_quadrant(df)
+    plot_price_by_grade(df)
+    plot_price_by_quadrant(df)
     plot_area_by_neighbourhood(df)
-    #plot_price_over_time(df)
-    #plot_price_heatmap(df)
-    #plot_count_heatmap(df)
+    plot_price_over_time(df)
+    plot_price_heatmap(df)
+    plot_count_heatmap(df)
 
 
 if __name__ == '__main__':
