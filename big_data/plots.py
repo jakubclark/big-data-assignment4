@@ -123,58 +123,71 @@ def plot_price_over_time(df):
 
 
 def plot_price_heatmap(df: pd.DataFrame):
-    def compute_color(price):
-        """
-        Go from price (a float) to a color (a string)
-        """
-        # TODO: Compute the color from a palette
-        if 0.0 < price < 500000.0:
-            return 'red'
-        elif 500000.0 < price < 1000000.0:
-            return 'blue'
-        elif 1000000.0 < price < 1500000:
-            return 'orange'
-        else:
-            return 'black'
+    def compute_data():
+        res = {}
+
+        for _, props in subset.iterrows():
+            lon = props['LONGITUDE']
+            lat = props['LATITUDE']
+            price = props['PRICE']
+            lon = round(lon, 3)
+            lat = round(lat, 3)
+            key = (lon, lat)
+
+            if price > 1500000:
+                continue
+
+            if key in res.keys():
+                res[key].append(price)
+            else:
+                res[key] = [price]
+
+        return res
+
+    def compute_data_points():
+        data = compute_data()
+        x_, y_, c_ = [], [], []
+        mean_prices = []
+
+        for coords, prices in data.items():
+            lon, lat = coords
+
+            x_.append(lon)
+            y_.append(lat)
+
+            mean_price = sum(prices) / len(prices)
+            mean_prices.append(mean_price)
+
+        max_price = max(mean_prices)
+
+        for mean_price in mean_prices:
+            color = 100 - round((mean_price / max_price) * 100)
+            c_.append(color)
+
+        return x_, y_, c_
+
+    def plot_data_points():
+        plt.clf()
+
+        fig = plt.figure(figsize=(9, 9))
+        ax = fig.gca()
+        ax.set_title('Mean Price map')
+        ax.set_xlabel('Longitude')
+        ax.set_ylabel('Latitude')
+
+        ax.scatter(x, y, s=5, c=c, marker='H', cmap='inferno')
+        # ax.scatter([-77.0017], [38.8844], c='black', s=500, marker='x')
+
+        ax.set_axisbelow(True)
+        ax.grid(linestyle='-', linewidth='0.1', color='black', which='both')
+
+        plt.savefig('mean_price_by_coordinate.pdf')
+        plt.show()
 
     subset = df[['LONGITUDE', 'LATITUDE', 'PRICE']].dropna()
 
-    data = {}
-
-    for _, props in subset.iterrows():
-        lon = props['LONGITUDE']
-        lat = props['LATITUDE']
-        value = props['PRICE']
-
-        lon = round(lon, 3)
-        lat = round(lat, 3)
-        key = (lon, lat)
-
-        if key in data.keys():
-            data[key].append(value)
-        else:
-            data[key] = [value]
-    x = []
-    y = []
-    c = []
-
-    for coords, prices in data.items():
-        lon, lat = coords
-        mean_price = sum(prices) / len(prices)
-        x.append(lon)
-        y.append(lat)
-        color = compute_color(mean_price)
-        c.append(color)
-
-    plt.clf()
-    plt.title('Mean Price map')
-    plt.xlabel('Longitude')
-    plt.ylabel('Latitude')
-
-    plt.scatter(x, y, s=1, c=c, marker='H')
-
-    plt.savefig('mean_price_by_coordinate.pdf')
-    plt.show()
+    x, y, c = compute_data_points()
+    plot_data_points()
 
 
 def plot_count_heatmap(df: pd.DataFrame):
@@ -185,15 +198,16 @@ def plot_count_heatmap(df: pd.DataFrame):
     heatmap, xedges, yedges = np.histogram2d(lons, lats, bins=(50, 50))
     extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
 
-    plt.clf()
-    plt.title('Number of Properties Heatmap')
-    plt.xlabel('Longitude')
-    plt.ylabel('Latitude')
+    fig = plt.figure(figsize=(9, 9))
+    ax = fig.gca()
+    ax.set_title('Number of Properties Heatmap')
+    ax.set_xlabel('Longitude')
+    ax.set_ylabel('Latitude')
 
-    plt.imshow(heatmap, extent=extent, origin='lower')
+    ax.imshow(heatmap, extent=extent, origin='lower')
 
-    plt.show()
     plt.savefig('number_of_properties_heatmap.pdf')
+    plt.show()
 
 
 def main():
