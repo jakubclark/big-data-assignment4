@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
+from matplotlib.colors import LogNorm
 
 
 def plot_price_by_grade(df: pd.DataFrame):
@@ -83,6 +84,8 @@ def plot_price_by_quadrant(df: pd.DataFrame):
     ax.set_title('Mean Price By Quadrant')
 
     fig.savefig('mean_price_by_quadrant.pdf')
+    fig.savefig('mean_price_by_quadrant.png')
+    fig.savefig('mean_price_by_quadrant.svg')
     plt.show()
 
 
@@ -119,95 +122,160 @@ def plot_price_over_time(df):
     ax.set_ylabel('Mean Price ($)')
 
     fig.savefig('mean_saleprice_over_time.pdf')
+    fig.savefig('mean_saleprice_over_time.png')
+    fig.savefig('mean_saleprice_over_time.svg')
     plt.show()
 
 
-def plot_price_heatmap(df: pd.DataFrame):
-    def compute_data():
-        res = {}
+def plot_price_by_coordinate(df: pd.DataFrame):
+    subset = df[['LONGITUDE', 'LATITUDE', 'PRICE', 'SALEDATE']].dropna().query('1000 < PRICE < 1500000')
+    subset['PRICE ($)'] = subset['PRICE']
 
-        for _, props in subset.iterrows():
-            lon = props['LONGITUDE']
-            lat = props['LATITUDE']
-            price = props['PRICE']
-            lon = round(lon, 3)
-            lat = round(lat, 3)
-            key = (lon, lat)
+    lats = subset['LATITUDE'].apply(lambda c: round(c, 3))
+    lons = subset['LONGITUDE'].apply(lambda c: round(c, 3))
+    prices = subset['PRICE']
 
-            if price > 1500000:
-                continue
+    temp = pd.concat([lats, lons, prices], axis=1)
 
-            if key in res.keys():
-                res[key].append(price)
-            else:
-                res[key] = [price]
+    by_coords = temp.groupby(['LATITUDE', 'LONGITUDE'])
 
-        return res
+    final_df = pd.DataFrame(columns=['LATITUDE', 'LONGITUDE', 'PRICE ($)'])
 
-    def compute_data_points():
-        data = compute_data()
-        x_, y_, c_ = [], [], []
-        mean_prices = []
+    for coords, props in by_coords:
+        mean_price = props['PRICE'].mean()
+        new_series = pd.Series({
+            'LATITUDE': coords[0],
+            'LONGITUDE': coords[1],
+            'PRICE ($)': mean_price
+        }, name=coords)
+        final_df = final_df.append(new_series)
 
-        for coords, prices in data.items():
-            lon, lat = coords
+    plot: 'FramePlotMethods' = final_df.plot.scatter(
+        x='LONGITUDE',
+        y='LATITUDE',
+        s=0.5,
+        c='PRICE ($)',
+        colormap='inferno',
+        marker='H',
+        norm=LogNorm()
+    )
 
-            x_.append(lon)
-            y_.append(lat)
+    plot.set_axisbelow(True)
+    plot.grid(linestyle='-', linewidth='0.5', color='black', which='major')
+    plot.set_title('Mean Price, by Coordinate')
+    plt.minorticks_on()
 
-            mean_price = sum(prices) / len(prices)
-            mean_prices.append(mean_price)
+    fig = plot.get_figure()
+    fig.savefig('mean_price_by_coordinate.pdf')
+    fig.savefig('mean_price_by_coordinate.png', dpi=300)
+    fig.savefig('mean_price_by_coordinate.svg')
+    plt.show()
 
-        max_price = max(mean_prices)
 
-        for mean_price in mean_prices:
-            color = 100 - round((mean_price / max_price) * 100)
-            c_.append(color)
-
-        return x_, y_, c_
-
-    def plot_data_points():
-        plt.clf()
-
-        fig = plt.figure(figsize=(9, 9))
-        ax = fig.gca()
-        ax.set_title('Mean Price map')
-        ax.set_xlabel('Longitude')
-        ax.set_ylabel('Latitude')
-
-        ax.scatter(x, y, s=5, c=c, marker='H', cmap='inferno')
-        # ax.scatter([-77.0017], [38.8844], c='black', s=500, marker='x')
-
-        ax.set_axisbelow(True)
-        ax.grid(linestyle='-', linewidth='0.1', color='black', which='both')
-
-        plt.savefig('mean_price_by_coordinate.pdf')
-        plt.show()
-
+def plot_count_by_coordinate(df: pd.DataFrame):
     subset = df[['LONGITUDE', 'LATITUDE', 'PRICE']].dropna()
 
-    x, y, c = compute_data_points()
-    plot_data_points()
+    lats = subset['LATITUDE'].apply(lambda c: round(c, 3))
+    lons = subset['LONGITUDE'].apply(lambda c: round(c, 3))
+    prices = subset['PRICE']
 
+    temp = pd.concat([lats, lons, prices], axis=1)
 
-def plot_count_heatmap(df: pd.DataFrame):
-    subset = df[['LONGITUDE', 'LATITUDE']].dropna()
-    lons = subset['LONGITUDE']
-    lats = subset['LATITUDE']
+    by_coords = temp.groupby(['LATITUDE', 'LONGITUDE'])
 
-    heatmap, xedges, yedges = np.histogram2d(lons, lats, bins=(50, 50))
-    extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
+    final_df = pd.DataFrame(columns=['LATITUDE', 'LONGITUDE', 'Number of Properties'])
 
-    fig = plt.figure(figsize=(9, 9))
-    ax = fig.gca()
-    ax.set_title('Number of Properties Heatmap')
-    ax.set_xlabel('Longitude')
-    ax.set_ylabel('Latitude')
+    for coords, props in by_coords:
+        num = len(props['PRICE'])
+        new_series = pd.Series({
+            'LATITUDE': coords[0],
+            'LONGITUDE': coords[1],
+            'Number of Properties': num
+        }, name=coords)
+        final_df = final_df.append(new_series)
 
-    ax.imshow(heatmap, extent=extent, origin='lower')
+    plot: 'FramePlotMethods' = final_df.plot.scatter(
+        x='LONGITUDE',
+        y='LATITUDE',
+        s=0.5,
+        c='Number of Properties',
+        colormap='viridis',
+        marker='H',
+        norm=LogNorm()
+    )
 
-    plt.savefig('number_of_properties_heatmap.pdf')
+    plot.set_axisbelow(True)
+    plot.grid(linestyle='-', linewidth='0.5', color='black', which='both')
+    plot.set_title('Number of Properties, by Coordinate')
+
+    fig = plot.get_figure()
+    fig.savefig('num_properties_by_coordinate.pdf')
+    fig.savefig('num_properties_by_coordinate.png')
+    fig.savefig('num_properties_by_coordinate.svg')
     plt.show()
+
+
+def plot_boxplots_by_quadrant(df):
+    subset = df[['PRICE', 'QUADRANT']].dropna()
+    groups = subset.groupby('QUADRANT')
+
+    prices_of_quadrants = []
+    labels = []
+
+    for quadrant, props in groups:
+        prices_of_quadrants.append(props['PRICE'])
+        labels.append(quadrant)
+
+    fig, ax = plt.subplots(figsize=(9, 5))
+
+    bp = ax.boxplot(prices_of_quadrants,
+                    labels=labels,
+                    vert=0,
+                    )
+
+    ax.set_axisbelow(True)
+    ax.grid(linestyle='-', linewidth='0.5', color='black', which='both', axis='x')
+    ax.set_xscale('log')
+
+    ax.set_ylabel('Quadrant')
+    ax.set_xlabel('Price ($)')
+    ax.set_title('Price Boxplot by Quadrant')
+
+    plt.setp(bp['boxes'], color='blue', linewidth=1)
+    plt.setp(bp['whiskers'], color='black', linewidth=1)
+    plt.setp(bp['caps'], color='black', linewidth=1)
+    plt.setp(bp['medians'], color='red', linewidth=1)
+
+    fig.savefig('boxplots_by_quadrant.pdf')
+    fig.savefig('boxplots_by_quadrant.png')
+    plt.show()
+
+
+def compute_basic_price_distribution(df):
+    def do_computation():
+        min_ = prices.min()
+        max_ = prices.max()
+        median_price = prices.median()
+        mean_price = prices.mean()
+
+        parts = {
+            'Minimum Price': min_,
+            'Maximum Price': max_,
+            'Median Price': median_price,
+            'Mean Price': mean_price
+        }
+
+        s = ' | '.join([f'{k}: ${v}' for k, v in parts.items()])
+        print(s)
+        return min_, max_
+
+    prices: pd.Series = df['PRICE'].dropna()
+
+    min_price, max_price = do_computation()
+
+    print('Removing the max and min prices')
+    prices = prices.where(lambda x: min_price < x).where(lambda x: x < max_price)
+    do_computation()
 
 
 def main():
@@ -215,8 +283,10 @@ def main():
     plot_price_by_grade(df)
     plot_price_by_quadrant(df)
     plot_price_over_time(df)
-    plot_price_heatmap(df)
-    plot_count_heatmap(df)
+    plot_price_by_coordinate(df)
+    plot_count_by_coordinate(df)
+    plot_boxplots_by_quadrant(df)
+    compute_basic_price_distribution(df)
 
 
 if __name__ == '__main__':
