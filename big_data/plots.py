@@ -30,7 +30,7 @@ def plot_price_by_grade(df: pd.DataFrame):
     ax.barh(y_pos, mean_prices, align='center')
 
     ax.set_axisbelow(True)
-    ax.grid(linestyle='-', linewidth='0.5', color='black', which='both')
+    ax.grid(linestyle='--', linewidth='0.5', color='black', which='both')
 
     minor_xticks = np.arange(0, 7000001, 500000)
     major_xticks = np.arange(0, 7000001, 1000000)
@@ -45,47 +45,6 @@ def plot_price_by_grade(df: pd.DataFrame):
     ax.set_title('Mean Price By Grade')
 
     fig.savefig('mean_price_by_grade.pdf')
-    plt.show()
-
-
-def plot_price_by_quadrant(df: pd.DataFrame):
-    groups = df.groupby('QUADRANT')
-
-    means = {}
-
-    for quadrant, props in groups:
-        prices: pd.Series = props['PRICE']
-        prices = prices.dropna()
-        mean_price = sum(prices) / len(prices)
-        means[quadrant] = mean_price
-
-    quadrant_labels = ['NW', 'NE', 'SE', 'SW']
-    y_pos = np.arange(len(quadrant_labels))
-
-    mean_prices = [means[quadrant] for quadrant in quadrant_labels]
-
-    fig, ax = plt.subplots()
-
-    ax.barh(y_pos, mean_prices, align='center')
-
-    ax.set_axisbelow(True)
-    ax.grid(linestyle='-', linewidth='0.5', color='black', which='both')
-
-    minor_xticks = np.arange(0, 1500001, 100000)
-    major_xticks = np.arange(0, 1500001, 500000)
-    ax.set_xticks(major_xticks)
-    ax.set_xticks(minor_xticks, minor=True)
-
-    ax.set_yticks(y_pos)
-    ax.set_yticklabels(quadrant_labels)
-
-    ax.set_xlabel('Mean Price ($)')
-    ax.set_ylabel('Quadrant Label')
-    ax.set_title('Mean Price By Quadrant')
-
-    fig.savefig('mean_price_by_quadrant.pdf')
-    fig.savefig('mean_price_by_quadrant.png')
-    fig.savefig('mean_price_by_quadrant.svg')
     plt.show()
 
 
@@ -122,8 +81,114 @@ def plot_price_over_time(df):
     ax.set_ylabel('Mean Price ($)')
 
     fig.savefig('mean_saleprice_over_time.pdf')
-    fig.savefig('mean_saleprice_over_time.png')
+    fig.savefig('mean_saleprice_over_time.png', dpi=300)
     fig.savefig('mean_saleprice_over_time.svg')
+    plt.show()
+
+
+def compute_basic_price_distribution(df):
+    def do_computation():
+        min_ = prices.min()
+        max_ = prices.max()
+        median_price = prices.median()
+        mean_price = prices.mean()
+
+        parts = {
+            'Minimum Price': min_,
+            'Maximum Price': max_,
+            'Median Price': median_price,
+            'Mean Price': mean_price
+        }
+
+        s = ' | '.join([f'{k}: ${v}' for k, v in parts.items()])
+        print(s)
+        return min_, max_
+
+    prices: pd.Series = df['PRICE'].dropna()
+
+    min_price, max_price = do_computation()
+
+    print('Removing the max and min prices')
+    prices = prices.where(lambda x: min_price < x).where(lambda x: x < max_price)
+    do_computation()
+
+
+def plot_price_by_quadrant(df: pd.DataFrame):
+    groups = df[['PRICE', 'QUADRANT']].dropna().groupby('QUADRANT')
+
+    final_df = pd.DataFrame(columns=['QUADRANT', 'MEAN PRICE'])
+
+    for quadrant, props in groups:
+        mean_price = props['PRICE'].mean()
+        final_df = final_df.append(pd.Series({
+            'QUADRANT': quadrant,
+            'MEAN PRICE': mean_price
+        }, name=quadrant))
+
+    x = ['NW', 'NE', 'SE', 'SW']
+    y = [final_df.get_value(quad, 'MEAN PRICE') for quad in x]
+
+    fig, ax = plt.subplots(figsize=(9, 5))
+
+    ax.barh(x, y, height=0.4)
+
+    ax.set_axisbelow(True)
+    ax.grid(linestyle='--', linewidth='0.5', color='black', which='major', axis='x')
+
+    minor_xticks = np.arange(0, 1500001, 20000)
+    major_xticks = np.arange(0, 1500001, 200000)
+    ax.set_xticks(major_xticks)
+    ax.set_xticks(minor_xticks, minor=True)
+
+    ax.set_xlabel('Mean Price ($)')
+    ax.set_ylabel('Quadrant')
+    ax.set_title('Mean Price by Quadrant')
+
+    fig.savefig('mean_price_by_quadrant.pdf')
+    fig.savefig('mean_price_by_quadrant.png', dpi=300)
+    fig.savefig('mean_price_by_quadrant.svg')
+    plt.show()
+    pass
+
+
+def plot_boxplots_by_quadrant(df):
+    subset = df[['PRICE', 'QUADRANT']].dropna()
+    groups = subset.groupby('QUADRANT')
+    quads = {}
+
+    for quadrant, props in groups:
+        quads[quadrant] = props['PRICE']
+
+    fig, ax = plt.subplots(figsize=(9, 5))
+
+    labels = ['NW', 'NE', 'SE', 'SW']
+    prices = [quads['NW'], quads['NE'], quads['SE'], quads['SW']]
+
+    bp = ax.boxplot(prices,
+                    labels=labels,
+                    vert=0
+                    )
+
+    ax.set_axisbelow(True)
+    ax.grid(linestyle='--', linewidth='0.5', color='black', which='both', axis='x')
+
+    ax.set_xscale('log')
+
+    major_xticks = [1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8]
+    major_xticks_labels = ['1e1', '1e2', '1e3', '1e4', '1e5', '1e6', '1e7', '1e8']
+    ax.set_xticks(major_xticks, major_xticks_labels)
+
+    ax.set_ylabel('Quadrant')
+    ax.set_xlabel('Price ($)')
+    ax.set_title('Price Boxplot by Quadrant')
+
+    plt.setp(bp['boxes'], color='blue', linewidth=1)
+    plt.setp(bp['whiskers'], color='black', linewidth=1)
+    plt.setp(bp['caps'], color='black', linewidth=1)
+    plt.setp(bp['medians'], color='red', linewidth=1)
+
+    fig.savefig('boxplots_by_quadrant.pdf')
+    fig.savefig('boxplots_by_quadrant.png', dpi=300)
     plt.show()
 
 
@@ -161,7 +226,7 @@ def plot_price_by_coordinate(df: pd.DataFrame):
     )
 
     plot.set_axisbelow(True)
-    plot.grid(linestyle='-', linewidth='0.5', color='black', which='major')
+    plot.grid(linestyle='--', linewidth='0.5', color='black', which='major')
     plot.set_title('Mean Price, by Coordinate')
     plt.minorticks_on()
 
@@ -205,88 +270,29 @@ def plot_count_by_coordinate(df: pd.DataFrame):
     )
 
     plot.set_axisbelow(True)
-    plot.grid(linestyle='-', linewidth='0.5', color='black', which='both')
+    plot.grid(linestyle='--', linewidth='0.5', color='black', which='both')
     plot.set_title('Number of Properties, by Coordinate')
 
     fig = plot.get_figure()
     fig.savefig('num_properties_by_coordinate.pdf')
-    fig.savefig('num_properties_by_coordinate.png')
+    fig.savefig('num_properties_by_coordinate.png', dpi=300)
     fig.savefig('num_properties_by_coordinate.svg')
     plt.show()
 
 
-def plot_boxplots_by_quadrant(df):
-    subset = df[['PRICE', 'QUADRANT']].dropna()
-    groups = subset.groupby('QUADRANT')
-
-    prices_of_quadrants = []
-    labels = []
-
-    for quadrant, props in groups:
-        prices_of_quadrants.append(props['PRICE'])
-        labels.append(quadrant)
-
-    fig, ax = plt.subplots(figsize=(9, 5))
-
-    bp = ax.boxplot(prices_of_quadrants,
-                    labels=labels,
-                    vert=0,
-                    )
-
-    ax.set_axisbelow(True)
-    ax.grid(linestyle='-', linewidth='0.5', color='black', which='both', axis='x')
-    ax.set_xscale('log')
-
-    ax.set_ylabel('Quadrant')
-    ax.set_xlabel('Price ($)')
-    ax.set_title('Price Boxplot by Quadrant')
-
-    plt.setp(bp['boxes'], color='blue', linewidth=1)
-    plt.setp(bp['whiskers'], color='black', linewidth=1)
-    plt.setp(bp['caps'], color='black', linewidth=1)
-    plt.setp(bp['medians'], color='red', linewidth=1)
-
-    fig.savefig('boxplots_by_quadrant.pdf')
-    fig.savefig('boxplots_by_quadrant.png')
-    plt.show()
-
-
-def compute_basic_price_distribution(df):
-    def do_computation():
-        min_ = prices.min()
-        max_ = prices.max()
-        median_price = prices.median()
-        mean_price = prices.mean()
-
-        parts = {
-            'Minimum Price': min_,
-            'Maximum Price': max_,
-            'Median Price': median_price,
-            'Mean Price': mean_price
-        }
-
-        s = ' | '.join([f'{k}: ${v}' for k, v in parts.items()])
-        print(s)
-        return min_, max_
-
-    prices: pd.Series = df['PRICE'].dropna()
-
-    min_price, max_price = do_computation()
-
-    print('Removing the max and min prices')
-    prices = prices.where(lambda x: min_price < x).where(lambda x: x < max_price)
-    do_computation()
-
-
 def main():
     df = pd.read_csv('DC_Properties.csv')
+
     plot_price_by_grade(df)
-    plot_price_by_quadrant(df)
     plot_price_over_time(df)
+    plot_price_over_time(df)
+
+    compute_basic_price_distribution(df)
+    plot_price_by_quadrant(df)
+    plot_boxplots_by_quadrant(df)
     plot_price_by_coordinate(df)
     plot_count_by_coordinate(df)
-    plot_boxplots_by_quadrant(df)
-    compute_basic_price_distribution(df)
+    print('Done creating the plots')
 
 
 if __name__ == '__main__':
