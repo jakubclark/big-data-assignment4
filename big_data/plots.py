@@ -113,6 +113,23 @@ def compute_basic_price_distribution(df):
     do_computation()
 
 
+def plot_price_histogram(df):
+    prices = df['PRICE'].dropna()
+
+    hist = prices.hist(figsize=(8, 4))
+
+    plt.title('Price Histogram')
+    plt.xlabel('Price')
+    plt.ylabel('Count')
+
+    fig = hist.get_figure()
+
+    fig.savefig('price_histogram.pdf')
+    fig.savefig('price_histogram.png', dpi=300)
+    fig.savefig('price_histogram.svg')
+    plt.show()
+
+
 def plot_price_by_quadrant(df: pd.DataFrame):
     groups = df[['PRICE', 'QUADRANT']].dropna().groupby('QUADRANT')
 
@@ -288,6 +305,7 @@ def main():
     plot_price_over_time(df)
 
     compute_basic_price_distribution(df)
+    plot_price_histogram(df)
     plot_price_by_quadrant(df)
     plot_boxplots_by_quadrant(df)
     plot_price_by_coordinate(df)
