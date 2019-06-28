@@ -5,7 +5,9 @@ from matplotlib.colors import LogNorm
 
 
 def plot_price_by_grade(df: pd.DataFrame):
-    groups = df.groupby('GRADE')
+    print('Plotting mean price by grade | QUALIFIED == Q')
+    subset = df[['GRADE', 'PRICE', 'QUALIFIED']].dropna().query('QUALIFIED == "Q"')
+    groups = subset.groupby('GRADE')
 
     means = {}
 
@@ -14,9 +16,6 @@ def plot_price_by_grade(df: pd.DataFrame):
         prices = prices.dropna()
         mean_price = sum(prices) / len(prices)
         means[grade] = mean_price
-
-    # 'No Data' is omitted
-    del means['No Data']
 
     grade_labels = ['Low Quality', 'Fair Quality', 'Average', 'Good Quality', 'Above Average',
                     'Very Good', 'Superior', 'Excellent',
@@ -49,8 +48,8 @@ def plot_price_by_grade(df: pd.DataFrame):
 
 
 def plot_price_over_time(df):
-    subset = df[['PRICE', 'SALEDATE']].dropna()
-
+    print('Plotting price over time | QUALIFIED == Q')
+    subset = df[['PRICE', 'SALEDATE', 'QUALIFIED']].dropna().query('QUALIFIED == "Q"')
     subset = subset.sort_values(by=['SALEDATE'])
 
     year_to_prices = {}
@@ -104,7 +103,9 @@ def compute_basic_price_distribution(df):
         print(s)
         return min_, max_
 
-    prices: pd.Series = df['PRICE'].dropna()
+    print('Computing basic price distribution')
+    subset = df[['PRICE', 'QUALIFIED']].dropna().query('QUALIFIED == "Q"')
+    prices = subset['PRICE']
 
     min_price, max_price = do_computation()
 
@@ -114,12 +115,14 @@ def compute_basic_price_distribution(df):
 
 
 def plot_price_histogram(df):
-    prices = df['PRICE'].dropna()
+    print('Plotting price histogram | QUALIFIED == Q')
+    subset = df[['PRICE', 'QUALIFIED']].dropna().query('QUALIFIED == "Q"')
+    prices = subset['PRICE']
 
     hist = prices.hist(figsize=(8, 4))
 
     plt.title('Price Histogram')
-    plt.xlabel('Price')
+    plt.xlabel('Price ($)')
     plt.ylabel('Count')
 
     fig = hist.get_figure()
@@ -131,7 +134,8 @@ def plot_price_histogram(df):
 
 
 def plot_price_by_quadrant(df: pd.DataFrame):
-    groups = df[['PRICE', 'QUADRANT']].dropna().groupby('QUADRANT')
+    print('Plotting mean price by quadrant | QUALIFIED == Q')
+    groups = df[['PRICE', 'QUADRANT', 'QUALIFIED']].dropna().query('QUALIFIED == "Q"').groupby('QUADRANT')
 
     final_df = pd.DataFrame(columns=['QUADRANT', 'MEAN PRICE'])
 
@@ -169,7 +173,8 @@ def plot_price_by_quadrant(df: pd.DataFrame):
 
 
 def plot_boxplots_by_quadrant(df):
-    subset = df[['PRICE', 'QUADRANT']].dropna()
+    print('Plotting boxplots by grade | QUALIFIED == Q')
+    subset = df[['PRICE', 'QUADRANT', 'QUALIFIED']].dropna().query('QUALIFIED == "Q"')
     groups = subset.groupby('QUADRANT')
     quads = {}
 
@@ -210,7 +215,9 @@ def plot_boxplots_by_quadrant(df):
 
 
 def plot_price_by_coordinate(df: pd.DataFrame):
-    subset = df[['LONGITUDE', 'LATITUDE', 'PRICE', 'SALEDATE']].dropna().query('1000 < PRICE < 1500000')
+    print('Plotting mean price by coordinate | QUALIFIED == Q')
+    subset = df[['LONGITUDE', 'LATITUDE', 'PRICE', 'QUALIFIED']].dropna() \
+        .query('QUALIFIED == "Q"')
     subset['PRICE ($)'] = subset['PRICE']
 
     lats = subset['LATITUDE'].apply(lambda c: round(c, 3))
@@ -255,7 +262,9 @@ def plot_price_by_coordinate(df: pd.DataFrame):
 
 
 def plot_count_by_coordinate(df: pd.DataFrame):
-    subset = df[['LONGITUDE', 'LATITUDE', 'PRICE']].dropna()
+    print('Plotting num of properties by coordinate | QUALIFIED == Q')
+    subset = df[['LONGITUDE', 'LATITUDE', 'PRICE', 'QUALIFIED']].dropna() \
+        .query('QUALIFIED == "Q"')
 
     lats = subset['LATITUDE'].apply(lambda c: round(c, 3))
     lons = subset['LONGITUDE'].apply(lambda c: round(c, 3))
@@ -301,7 +310,6 @@ def main():
     df = pd.read_csv('DC_Properties.csv')
 
     plot_price_by_grade(df)
-    plot_price_over_time(df)
     plot_price_over_time(df)
 
     compute_basic_price_distribution(df)
