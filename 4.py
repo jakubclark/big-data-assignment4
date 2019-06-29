@@ -206,15 +206,8 @@ def main():
     print("cor (price, condition):")
     print(cor)
     
-    x = df['ROOMS']
-    cor, p = correlate(y, x)
-    print("cor (price, rooms):")
-    print(cor)
     
-    x = df['ROOMS']
-    cor, p = correlate(y, x)
-    print("cor (price, ac):")
-    print(cor)
+    
     
     
     None
