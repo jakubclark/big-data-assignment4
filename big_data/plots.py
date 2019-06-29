@@ -418,7 +418,7 @@ def price_vs_grade_and_condition(full_df):
 
     def regress(target_, preds):
         preds = sm.add_constant(preds)
-        model = sm.OLS(np.asarray(target_), np.asarray(preds)).fit()
+        model = sm.OLS(target_, preds).fit()
         print(model.summary())
 
     def scatter_column(column):
@@ -426,7 +426,7 @@ def price_vs_grade_and_condition(full_df):
             x=column,
             y='PRICE',
             title=f'Price vs {column}',
-            figsize=(9, 5)
+            figsize=(12, 8)
         )
         plot.minorticks_on()
         plot.set_axisbelow(True)
@@ -440,7 +440,7 @@ def price_vs_grade_and_condition(full_df):
         fig.savefig(f'{column}_vs_price.png', dpi=300)
         plt.show()
 
-    def bar_column(column, labels, to_ignore=None):
+    def bar_column(column, to_ignore=None):
         """
         Plot the mean price, by `column` as a horizontal-bar-graph.
         `labels` determines the order in which the groups appear in.
@@ -448,33 +448,32 @@ def price_vs_grade_and_condition(full_df):
 
         groups = subset.groupby(column)
 
-        means = {}
+        final_df = pd.DataFrame(columns=[column])
 
-        for grade, props in groups:
+        for col, props in groups:
+            if col == to_ignore:
+                continue
             mean_price = props['PRICE'].mean()
-            means[grade] = mean_price
+            final_df = final_df.append(pd.Series({
+                'MEAN_PRICE': mean_price,
+                column: col
+            }, name=col))
 
-        # 'No Data' from GRADE is omitted | 'Default' from CNDTN is omitted
-        del means[to_ignore]
+        final_df.sort_values(by='MEAN_PRICE', inplace=True)
+        plot = final_df.plot.barh(
+            x=column,
+            y='MEAN_PRICE',
+            figsize=(12, 8),
+            title=f'Mean Price by {column}',
+            grid=True
+        )
+        plot.minorticks_on()
+        plot.set_axisbelow(True)
+        plot.grid(linestyle='--', linewidth='0.5', color='black', which='major')
 
-        y_pos = np.arange(len(labels))
+        plot.set_xlabel('Mean Price ($)')
 
-        mean_prices = [means[grade] for grade in labels]
-
-        fig, ax = plt.subplots(figsize=(9, 5))
-
-        ax.barh(y_pos, mean_prices, align='center')
-
-        ax.set_axisbelow(True)
-        ax.grid(linestyle='-', linewidth='0.5', color='black', which='both')
-
-        ax.set_yticks(y_pos)
-        ax.set_yticklabels(labels)
-
-        ax.set_xlabel('Mean Price ($)')
-        ax.set_ylabel(column + ' Label')
-        ax.set_title('Mean Price By ' + column)
-
+        fig = plot.get_figure()
         fig.savefig(f'mean_price_by_{column}.pdf')
         fig.savefig(f'mean_price_by_{column}.png', dpi=300)
         plt.show()
@@ -482,20 +481,14 @@ def price_vs_grade_and_condition(full_df):
     # Clean up the data
     subset = full_df[['GRADE', 'CNDTN', 'LANDAREA', 'SQUARE', 'ROOMS', 'PRICE']].dropna().query('SQUARE != "PAR "')
     subset['SQUARE'] = subset['SQUARE'].apply(int)
+    subset['Condition'] = subset['CNDTN']
+    subset['Grade'] = subset['GRADE']
 
     # Plot Mean Price by Grade
-    grade_labels = [
-        'Low Quality', 'Fair Quality', 'Average',
-        'Good Quality', 'Above Average',
-        'Very Good', 'Superior', 'Excellent',
-        'Exceptional-A', 'Exceptional-B',
-        'Exceptional-C', 'Exceptional-D'
-    ]
-    bar_column('GRADE', grade_labels, to_ignore='No Data')
+    bar_column('Grade', to_ignore='No Data')
 
     # Plot Mean Price by Condition
-    condition_labels = ['Poor', 'Fair', 'Average', 'Good', 'Very Good', 'Excellent']
-    bar_column('CNDTN', condition_labels, to_ignore='Default')
+    bar_column('Condition', to_ignore='Default')
 
     # Plot Land Area vs Price
     scatter_column('LANDAREA')
