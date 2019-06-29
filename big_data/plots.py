@@ -7,6 +7,10 @@ from scipy import stats
 from scipy.stats import pearsonr
 
 
+# NOTE: This file depends on a .csv file called `cpi_csv`, which is provided with the uploaded
+# Also, the plots are saved to a folder called `plots`, which will need to be created first
+
+
 def plot_adjusted_price_over_time(df):
     def adjust_for_inflation(prices, year_):
         # Based on
@@ -58,8 +62,8 @@ def plot_adjusted_price_over_time(df):
         plot.set_ylabel('Price ($)')
 
         fig = plot.get_figure()
-        fig.savefig(f'mean_price_over_time_{ignore_outliers}.pdf')
-        fig.savefig(f'mean_price_over_time_{ignore_outliers}.png', dpi=300)
+        fig.savefig(f'plots/mean_price_over_time_{ignore_outliers}.pdf')
+        fig.savefig(f'plots/mean_price_over_time_{ignore_outliers}.png', dpi=300)
         plt.show()
 
     make_plot(True)
@@ -99,8 +103,8 @@ def plot_price_histogram(df):
 
     fig = hist.get_figure()
 
-    fig.savefig('price_histogram.pdf')
-    fig.savefig('price_histogram.png', dpi=300)
+    fig.savefig('plots/price_histogram.pdf')
+    fig.savefig('plots/price_histogram.png', dpi=300)
     plt.show()
 
 
@@ -141,8 +145,8 @@ def plot_boxplots_by_quadrant(df):
     plt.setp(bp['caps'], color='black', linewidth=1)
     plt.setp(bp['medians'], color='red', linewidth=1)
 
-    fig.savefig('boxplots_by_quadrant.pdf')
-    fig.savefig('boxplots_by_quadrant.png', dpi=300)
+    fig.savefig('plots/boxplots_by_quadrant.pdf')
+    fig.savefig('plots/boxplots_by_quadrant.png', dpi=300)
     plt.show()
 
 
@@ -177,8 +181,8 @@ def plot_count_by_quadrant(df):
     ax.set_ylabel('Quadrant')
     ax.set_title('Number of Properties by Quadrant')
 
-    fig.savefig('num_properties_by_quadrant.pdf')
-    fig.savefig('num_properties_by_quadrant.png', dpi=300)
+    fig.savefig('plots/num_properties_by_quadrant.pdf')
+    fig.savefig('plots/num_properties_by_quadrant.png', dpi=300)
     plt.show()
     pass
 
@@ -224,8 +228,8 @@ def plot_price_by_coordinate(df: pd.DataFrame):
     plt.minorticks_on()
 
     fig = plot.get_figure()
-    fig.savefig('mean_price_by_coordinate.pdf')
-    fig.savefig('mean_price_by_coordinate.png', dpi=300)
+    fig.savefig('plots/mean_price_by_coordinate.pdf')
+    fig.savefig('plots/mean_price_by_coordinate.png', dpi=300)
     plt.show()
 
 
@@ -268,8 +272,8 @@ def plot_count_by_coordinate(df: pd.DataFrame):
     plot.set_title('Number of Properties, by Coordinate')
 
     fig = plot.get_figure()
-    fig.savefig('num_properties_by_coordinate.pdf')
-    fig.savefig('num_properties_by_coordinate.png', dpi=300)
+    fig.savefig('plots/num_properties_by_coordinate.pdf')
+    fig.savefig('plots/num_properties_by_coordinate.png', dpi=300)
     plt.show()
 
 
@@ -297,8 +301,8 @@ def compute_correlation_price_vs_longitude(df):
     plot.set_ylabel('Price ($)')
 
     fig = plot.get_figure()
-    fig.savefig('longitude_vs_price.pdf')
-    fig.savefig('longitude_vs_price.png', dpi=300)
+    fig.savefig('plots/longitude_vs_price.pdf')
+    fig.savefig('plots/longitude_vs_price.png', dpi=300)
     plt.show()
 
     pass
@@ -323,8 +327,8 @@ def plots_by_build_date(df):
         plot.set_xlabel('Build Year')
         fig = plot.get_figure()
 
-        fig.savefig('price_over_time_by_build_date.pdf')
-        fig.savefig('price_over_time_by_build_date.png', dpi=300)
+        fig.savefig('plots/price_over_time_by_build_date.pdf')
+        fig.savefig('plots/price_over_time_by_build_date.png', dpi=300)
         plt.show()
 
     def plot_nineties():
@@ -336,8 +340,8 @@ def plots_by_build_date(df):
         hst2.set_xlabel("Year")
         hst2.set_title('1980-2000')
         fig = hst2.get_figure()
-        fig.savefig('price_over_time_by_build_date_1980-2000.png', dpi=300)
-        fig.savefig('price_over_time_by_build_date_1980-2000.pdf')
+        fig.savefig('plots/price_over_time_by_build_date_1980-2000.png', dpi=300)
+        fig.savefig('plots/price_over_time_by_build_date_1980-2000.pdf')
         plt.show()
 
     plot_all()
@@ -355,8 +359,8 @@ def plots_price_frequencies(df):
         plot.set_ylabel('Number of properties')
 
         fig = plot.get_figure()
-        fig.savefig('price_freq.png', dpi=300)
-        fig.savefig('price_freq.pdf')
+        fig.savefig('plots/price_freq.png', dpi=300)
+        fig.savefig('plots/price_freq.pdf')
         plt.show()
 
     def plot_nineties():
@@ -372,8 +376,8 @@ def plots_price_frequencies(df):
         plot.set_ylabel('Number of properties')
 
         fig = plot.get_figure()
-        fig.savefig('price_freq80.png', dpi=300)
-        fig.savefig('price_freq80.pdf')
+        fig.savefig('plots/price_freq80.png', dpi=300)
+        fig.savefig('plots/price_freq80.pdf')
         plt.show()
 
     plot_all()
@@ -436,8 +440,8 @@ def price_vs_grade_and_condition(full_df):
         plot.set_ylabel('Price ($)')
 
         fig = plot.get_figure()
-        fig.savefig(f'{column}_vs_price.pdf')
-        fig.savefig(f'{column}_vs_price.png', dpi=300)
+        fig.savefig(f'plots/{column}_vs_price.pdf')
+        fig.savefig(f'plots/{column}_vs_price.png', dpi=300)
         plt.show()
 
     def bar_column(column, to_ignore=None):
@@ -474,8 +478,8 @@ def price_vs_grade_and_condition(full_df):
         plot.set_xlabel('Mean Price ($)')
 
         fig = plot.get_figure()
-        fig.savefig(f'mean_price_by_{column}.pdf')
-        fig.savefig(f'mean_price_by_{column}.png', dpi=300)
+        fig.savefig(f'plots/mean_price_by_{column}.pdf')
+        fig.savefig(f'plots/mean_price_by_{column}.png', dpi=300)
         plt.show()
 
     # Clean up the data
