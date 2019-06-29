@@ -2,116 +2,87 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 from matplotlib.colors import LogNorm
+from scipy.stats import pearsonr
 
 
-def plot_price_by_grade(df: pd.DataFrame):
-    print('Plotting mean price by grade | QUALIFIED == Q')
-    subset = df[['GRADE', 'PRICE', 'QUALIFIED']].dropna().query('QUALIFIED == "Q"')
-    groups = subset.groupby('GRADE')
+def plot_adjusted_price_over_time(df):
+    def adjust_for_inflation(prices, year_):
+        # Based on
+        # https://www.usinflationcalculator.com/inflation/consumer-price-index-and-annual-percent-changes-from-1913-to-2008/
+        # and
+        # https://www.usinflationcalculator.com/frequently-asked-questions-faqs/#HowInflationCalculatorWorks
+        mean = np.mean(prices)
+        cpi = cpi_df.get_value(year_, 'Avg_CPI')
+        adjusted = mean * (current_cpi / cpi)
+        return adjusted
 
-    means = {}
+    cpi_df = pd.read_csv('cpi.csv', index_col='Year')
+    current_cpi = 256.1
 
-    for grade, props in groups:
-        prices: pd.Series = props['PRICE']
-        prices = prices.dropna()
-        mean_price = sum(prices) / len(prices)
-        means[grade] = mean_price
+    def make_plot(ignore_outliers=False):
+        print(f'Plotting price over time. | ignore_outliers={ignore_outliers}')
+        subset = df[['PRICE', 'SALEDATE']].dropna()
 
-    grade_labels = ['Low Quality', 'Fair Quality', 'Average', 'Good Quality', 'Above Average',
-                    'Very Good', 'Superior', 'Excellent',
-                    'Exceptional-A', 'Exceptional-B', 'Exceptional-C', 'Exceptional-D']
-    y_pos = np.arange(len(grade_labels))
+        subset['YEAR'] = subset['SALEDATE'].apply(lambda date: int(date.split('-')[0]))
+        groups = subset.groupby('YEAR')
 
-    mean_prices = [means[grade] for grade in grade_labels]
+        final_df = pd.DataFrame(columns=['YEAR', 'MEAN_PRICE', 'ADJUSTED_MEAN_PRICE', 'MEAN_ADJUSTED_PRICE'])
+        for year, props in groups:
+            if not ignore_outliers and year in (1991, 2007, 2008, 2014, 2015):
+                continue
+            mean_price = props['PRICE'].mean()
+            adjusted_mean_price = adjust_for_inflation(mean_price, year)
+            final_df = final_df.append(pd.Series({
+                'YEAR': year,
+                'MEAN_PRICE': mean_price,
+                'ADJUSTED_MEAN_PRICE': adjusted_mean_price
+            }, name=year))
 
-    fig, ax = plt.subplots()
+        plot = final_df.plot.line(
+            x='YEAR',
+            y=['ADJUSTED_MEAN_PRICE', 'MEAN_PRICE'],
+        )
 
-    ax.barh(y_pos, mean_prices, align='center')
+        plot.minorticks_on()
+        plot.set_axisbelow(True)
+        plot.grid(linestyle='--', linewidth='0.5', color='black', which='major')
 
-    ax.set_axisbelow(True)
-    ax.grid(linestyle='--', linewidth='0.5', color='black', which='both')
-
-    minor_xticks = np.arange(0, 7000001, 500000)
-    major_xticks = np.arange(0, 7000001, 1000000)
-    ax.set_xticks(major_xticks)
-    ax.set_xticks(minor_xticks, minor=True)
-
-    ax.set_yticks(y_pos)
-    ax.set_yticklabels(grade_labels)
-
-    ax.set_xlabel('Mean Price ($)')
-    ax.set_ylabel('Grade Label')
-    ax.set_title('Mean Price By Grade')
-
-    fig.savefig('mean_price_by_grade.pdf')
-    plt.show()
-
-
-def plot_price_over_time(df):
-    print('Plotting price over time | QUALIFIED == Q')
-    subset = df[['PRICE', 'SALEDATE', 'QUALIFIED']].dropna().query('QUALIFIED == "Q"')
-    subset = subset.sort_values(by=['SALEDATE'])
-
-    year_to_prices = {}
-
-    for _, props in subset.iterrows():
-        saledate = props['SALEDATE']
-        price = props['PRICE']
-        year = int(saledate.split('-')[0])
-        if year in year_to_prices.keys():
-            year_to_prices[year].append(price)
+        if ignore_outliers:
+            plot.set_title('Mean Price over Time - Without Outliers')
         else:
-            year_to_prices[year] = [price]
+            plot.set_title('Mean Price over Time - With Outliers')
 
-    year_to_mean_prices = {}
+        plot.set_xlabel('Year')
+        plot.set_ylabel('Price ($)')
 
-    for year, prices in year_to_prices.items():
-        mean_price = sum(prices) / len(prices)
-        year_to_mean_prices[year] = mean_price
+        fig = plot.get_figure()
+        fig.savefig(f'mean_price_over_time_{ignore_outliers}.pdf')
+        fig.savefig(f'mean_price_over_time_{ignore_outliers}.png', dpi=300)
+        plt.show()
 
-    x = list(year_to_mean_prices.keys())
-    y = list(year_to_mean_prices.values())
-
-    fig, ax = plt.subplots()
-
-    ax.plot(x, y)
-    ax.set_title('Year vs Mean Property Price')
-    ax.set_xlabel('Saledate')
-    ax.set_ylabel('Mean Price ($)')
-
-    fig.savefig('mean_saleprice_over_time.pdf')
-    fig.savefig('mean_saleprice_over_time.png', dpi=300)
-    fig.savefig('mean_saleprice_over_time.svg')
-    plt.show()
+    make_plot(True)
+    make_plot()
+    pass
 
 
 def compute_basic_price_distribution(df):
-    def do_computation():
-        min_ = prices.min()
-        max_ = prices.max()
-        median_price = prices.median()
-        mean_price = prices.mean()
-
-        parts = {
-            'Minimum Price': min_,
-            'Maximum Price': max_,
-            'Median Price': median_price,
-            'Mean Price': mean_price
-        }
-
-        s = ' | '.join([f'{k}: ${v}' for k, v in parts.items()])
-        print(s)
-        return min_, max_
-
     print('Computing basic price distribution')
+
     subset = df[['PRICE', 'QUALIFIED']].dropna().query('QUALIFIED == "Q"')
     prices = subset['PRICE']
 
-    min_price, max_price = do_computation()
+    min_ = prices.min()
+    max_ = prices.max()
+    median_price = prices.median()
+    mean_price = prices.mean()
 
-    print('Removing the max and min prices')
-    prices = prices.where(lambda x: min_price < x).where(lambda x: x < max_price)
-    do_computation()
+    parts = {
+        'Minimum': min_,
+        'Maximum': max_,
+        'Median': median_price,
+        'Mean': mean_price
+    }
+    print(' | '.join([f'{k}={v}' for k, v in parts.items()]))
 
 
 def plot_price_histogram(df):
@@ -129,47 +100,7 @@ def plot_price_histogram(df):
 
     fig.savefig('price_histogram.pdf')
     fig.savefig('price_histogram.png', dpi=300)
-    fig.savefig('price_histogram.svg')
     plt.show()
-
-
-def plot_price_by_quadrant(df: pd.DataFrame):
-    print('Plotting mean price by quadrant | QUALIFIED == Q')
-    groups = df[['PRICE', 'QUADRANT', 'QUALIFIED']].dropna().query('QUALIFIED == "Q"').groupby('QUADRANT')
-
-    final_df = pd.DataFrame(columns=['QUADRANT', 'MEAN PRICE'])
-
-    for quadrant, props in groups:
-        mean_price = props['PRICE'].mean()
-        final_df = final_df.append(pd.Series({
-            'QUADRANT': quadrant,
-            'MEAN PRICE': mean_price
-        }, name=quadrant))
-
-    x = ['NW', 'NE', 'SE', 'SW']
-    y = [final_df.get_value(quad, 'MEAN PRICE') for quad in x]
-
-    fig, ax = plt.subplots(figsize=(9, 5))
-
-    ax.barh(x, y, height=0.4)
-
-    ax.set_axisbelow(True)
-    ax.grid(linestyle='--', linewidth='0.5', color='black', which='major', axis='x')
-
-    minor_xticks = np.arange(0, 1500001, 20000)
-    major_xticks = np.arange(0, 1500001, 200000)
-    ax.set_xticks(major_xticks)
-    ax.set_xticks(minor_xticks, minor=True)
-
-    ax.set_xlabel('Mean Price ($)')
-    ax.set_ylabel('Quadrant')
-    ax.set_title('Mean Price by Quadrant')
-
-    fig.savefig('mean_price_by_quadrant.pdf')
-    fig.savefig('mean_price_by_quadrant.png', dpi=300)
-    fig.savefig('mean_price_by_quadrant.svg')
-    plt.show()
-    pass
 
 
 def plot_boxplots_by_quadrant(df):
@@ -212,6 +143,43 @@ def plot_boxplots_by_quadrant(df):
     fig.savefig('boxplots_by_quadrant.pdf')
     fig.savefig('boxplots_by_quadrant.png', dpi=300)
     plt.show()
+
+
+def plot_count_by_quadrant(df):
+    print('Plotting total number of properties by the quadrant')
+    subset = df[['PRICE', 'QUADRANT', 'QUALIFIED']].dropna().query('QUALIFIED == "Q"')
+    groups = subset.groupby('QUADRANT')
+
+    final_df = pd.DataFrame(columns=['Number of Properties'])
+    for quadrant, props in groups:
+        final_df = final_df.append(pd.Series({
+            'Number of Properties': props['PRICE'].size
+        }, name=quadrant))
+    pass
+
+    x = ['NW', 'NE', 'SE', 'SW']
+    y = [final_df.get_value(quad, 'Number of Properties') for quad in x]
+
+    fig, ax = plt.subplots(figsize=(9, 5))
+
+    ax.barh(x, y, height=0.4)
+
+    ax.set_axisbelow(True)
+    ax.grid(linestyle='--', linewidth='0.5', color='black', which='major', axis='x')
+
+    minor_xticks = np.arange(0, 50000, 1000)
+    major_xticks = np.arange(0, 50000, 5000)
+    ax.set_xticks(major_xticks)
+    ax.set_xticks(minor_xticks, minor=True)
+
+    ax.set_xlabel('Number of Properties')
+    ax.set_ylabel('Quadrant')
+    ax.set_title('Number of Properties by Quadrant')
+
+    fig.savefig('num_properties_by_quadrant.pdf')
+    fig.savefig('num_properties_by_quadrant.png', dpi=300)
+    plt.show()
+    pass
 
 
 def plot_price_by_coordinate(df: pd.DataFrame):
@@ -257,7 +225,6 @@ def plot_price_by_coordinate(df: pd.DataFrame):
     fig = plot.get_figure()
     fig.savefig('mean_price_by_coordinate.pdf')
     fig.savefig('mean_price_by_coordinate.png', dpi=300)
-    fig.savefig('mean_price_by_coordinate.svg')
     plt.show()
 
 
@@ -302,22 +269,51 @@ def plot_count_by_coordinate(df: pd.DataFrame):
     fig = plot.get_figure()
     fig.savefig('num_properties_by_coordinate.pdf')
     fig.savefig('num_properties_by_coordinate.png', dpi=300)
-    fig.savefig('num_properties_by_coordinate.svg')
     plt.show()
+
+
+def compute_correlation_price_vs_longitude(df):
+    subset = (df[['LONGITUDE', 'PRICE', 'QUALIFIED']].dropna()
+              .query('QUALIFIED == "Q"'))
+    lons = subset['LONGITUDE']
+    prices = subset['PRICE']
+
+    pear = pearsonr(lons, prices)
+    print(f'pearsonr: {pear}')
+
+    plot = subset.plot.scatter(
+        x='LONGITUDE',
+        y='PRICE',
+        s=5
+    )
+
+    plot.minorticks_on()
+    plot.set_axisbelow(True)
+    plot.grid(linestyle='--', linewidth='0.5', color='black', which='major', axis='both')
+
+    plot.set_title('Longitude vs Price')
+    plot.set_xlabel('Longitude')
+    plot.set_ylabel('Price ($)')
+
+    fig = plot.get_figure()
+    fig.savefig('longitude_vs_price.pdf')
+    fig.savefig('longitude_vs_price.png', dpi=300)
+    plt.show()
+
+    pass
 
 
 def main():
     df = pd.read_csv('DC_Properties.csv')
 
-    plot_price_by_grade(df)
-    plot_price_over_time(df)
-
     compute_basic_price_distribution(df)
     plot_price_histogram(df)
-    plot_price_by_quadrant(df)
     plot_boxplots_by_quadrant(df)
     plot_price_by_coordinate(df)
+    plot_count_by_quadrant(df)
     plot_count_by_coordinate(df)
+    plot_adjusted_price_over_time(df)
+    compute_correlation_price_vs_longitude(df)
     print('Done creating the plots')
 
 
