@@ -1,7 +1,9 @@
 import numpy as np
 import pandas as pd
+import statsmodels.api as sm
 from matplotlib import pyplot as plt
 from matplotlib.colors import LogNorm
+from scipy import stats
 from scipy.stats import pearsonr
 
 
@@ -378,6 +380,146 @@ def plots_price_frequencies(df):
     plot_nineties()
 
 
+def price_vs_grade_and_condition(full_df):
+    grade_to_num = {
+        'No Data': 0,
+        'Low Quality': 1,
+        'Fair Quality': 2,
+        'Average': 3,
+        'Above Average': 4,
+        'Good Quality': 5,
+        'Very Good': 6,
+        'Superior': 7,
+        'Excellent': 8,
+        'Exceptional-A': 9,
+        'Exceptional-B': 10,
+        'Exceptional-C': 11,
+        'Exceptional-D': 12
+    }
+
+    condition_to_num = {
+        'Default': 0,
+        'Poor': 1,
+        'Fair': 2,
+        'Average': 3,
+        'Good': 4,
+        'Very Good': 5,
+        'Excellent': 6
+    }
+
+    def correlate(x_col, test_type='pearson'):
+        """
+        Correlates `x_col` with PRICE, using `test_type` as the correlation test
+        """
+        y = subset['PRICE']
+        x = subset[x_col]
+        res = stats.pearsonr(x, y)
+        print(f'Correlation between PRICE and {x_col}: {res}')
+
+    def regress(target_, preds):
+        preds = sm.add_constant(preds)
+        model = sm.OLS(np.asarray(target_), np.asarray(preds)).fit()
+        print(model.summary())
+
+    def scatter_column(column):
+        plot = subset.plot.scatter(
+            x=column,
+            y='PRICE',
+            title=f'Price vs {column}',
+            figsize=(9, 5)
+        )
+        plot.minorticks_on()
+        plot.set_axisbelow(True)
+        plot.grid(linestyle='--', linewidth='0.5', color='black', which='major')
+
+        plot.set_xlabel(column)
+        plot.set_ylabel('Price ($)')
+
+        fig = plot.get_figure()
+        fig.savefig(f'{column}_vs_price.pdf')
+        fig.savefig(f'{column}_vs_price.png', dpi=300)
+        plt.show()
+
+    def bar_column(column, labels, to_ignore=None):
+        """
+        Plot the mean price, by `column` as a horizontal-bar-graph.
+        `labels` determines the order in which the groups appear in.
+        """
+
+        groups = subset.groupby(column)
+
+        means = {}
+
+        for grade, props in groups:
+            mean_price = props['PRICE'].mean()
+            means[grade] = mean_price
+
+        # 'No Data' from GRADE is omitted | 'Default' from CNDTN is omitted
+        del means[to_ignore]
+
+        y_pos = np.arange(len(labels))
+
+        mean_prices = [means[grade] for grade in labels]
+
+        fig, ax = plt.subplots(figsize=(9, 5))
+
+        ax.barh(y_pos, mean_prices, align='center')
+
+        ax.set_axisbelow(True)
+        ax.grid(linestyle='-', linewidth='0.5', color='black', which='both')
+
+        ax.set_yticks(y_pos)
+        ax.set_yticklabels(labels)
+
+        ax.set_xlabel('Mean Price ($)')
+        ax.set_ylabel(column + ' Label')
+        ax.set_title('Mean Price By ' + column)
+
+        fig.savefig(f'mean_price_by_{column}.pdf')
+        fig.savefig(f'mean_price_by_{column}.png', dpi=300)
+        plt.show()
+
+    # Clean up the data
+    subset = full_df[['GRADE', 'CNDTN', 'LANDAREA', 'SQUARE', 'ROOMS', 'PRICE']].dropna().query('SQUARE != "PAR "')
+    subset['SQUARE'] = subset['SQUARE'].apply(int)
+
+    # Plot Mean Price by Grade
+    grade_labels = [
+        'Low Quality', 'Fair Quality', 'Average',
+        'Good Quality', 'Above Average',
+        'Very Good', 'Superior', 'Excellent',
+        'Exceptional-A', 'Exceptional-B',
+        'Exceptional-C', 'Exceptional-D'
+    ]
+    bar_column('GRADE', grade_labels, to_ignore='No Data')
+
+    # Plot Mean Price by Condition
+    condition_labels = ['Poor', 'Fair', 'Average', 'Good', 'Very Good', 'Excellent']
+    bar_column('CNDTN', condition_labels, to_ignore='Default')
+
+    # Plot Land Area vs Price
+    scatter_column('LANDAREA')
+
+    # Plot Square vs Price
+    scatter_column('SQUARE')
+
+    # Convert these to numerical values
+    subset['GRADE'] = subset['GRADE'].apply(lambda c: grade_to_num[c])
+    subset['CNDTN'] = subset['CNDTN'].apply(lambda c: condition_to_num[c])
+
+    # Do a regression
+    target = subset['PRICE']
+    predictors = subset[['LANDAREA', 'SQUARE', 'GRADE', 'CNDTN']]
+    regress(target, predictors)
+
+    # Correlate these variables with the price
+    correlate('LANDAREA')
+    correlate('SQUARE')
+    correlate('GRADE')
+    correlate('CNDTN')
+    correlate('ROOMS')
+
+
 def main():
     df = pd.read_csv('DC_Properties.csv')
 
@@ -392,6 +534,9 @@ def main():
 
     plots_by_build_date(df)
     plots_price_frequencies(df)
+
+    price_vs_grade_and_condition(df)
+
     print('Done creating the plots')
 
 
