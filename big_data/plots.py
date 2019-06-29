@@ -20,7 +20,7 @@ def plot_adjusted_price_over_time(df):
     current_cpi = 256.1
 
     def make_plot(ignore_outliers=False):
-        print(f'Plotting price over time. | ignore_outliers={ignore_outliers}')
+        print(f'Plotting mean sale price over time. ignore_outliers={ignore_outliers}')
         subset = df[['PRICE', 'SALEDATE']].dropna()
 
         subset['YEAR'] = subset['SALEDATE'].apply(lambda date: int(date.split('-')[0]))
@@ -62,7 +62,6 @@ def plot_adjusted_price_over_time(df):
 
     make_plot(True)
     make_plot()
-    pass
 
 
 def compute_basic_price_distribution(df):
@@ -86,7 +85,7 @@ def compute_basic_price_distribution(df):
 
 
 def plot_price_histogram(df):
-    print('Plotting price histogram | QUALIFIED == Q')
+    print('Plotting sale-price histogram.')
     subset = df[['PRICE', 'QUALIFIED']].dropna().query('QUALIFIED == "Q"')
     prices = subset['PRICE']
 
@@ -104,7 +103,7 @@ def plot_price_histogram(df):
 
 
 def plot_boxplots_by_quadrant(df):
-    print('Plotting boxplots by grade | QUALIFIED == Q')
+    print('Plotting sale-price boxplots by grade')
     subset = df[['PRICE', 'QUADRANT', 'QUALIFIED']].dropna().query('QUALIFIED == "Q"')
     groups = subset.groupby('QUADRANT')
     quads = {}
@@ -146,7 +145,7 @@ def plot_boxplots_by_quadrant(df):
 
 
 def plot_count_by_quadrant(df):
-    print('Plotting total number of properties by the quadrant')
+    print('Plotting total number of properties by quadrant')
     subset = df[['PRICE', 'QUADRANT', 'QUALIFIED']].dropna().query('QUALIFIED == "Q"')
     groups = subset.groupby('QUADRANT')
 
@@ -183,7 +182,7 @@ def plot_count_by_quadrant(df):
 
 
 def plot_price_by_coordinate(df: pd.DataFrame):
-    print('Plotting mean price by coordinate | QUALIFIED == Q')
+    print('Plotting mean sale-price by coordinate')
     subset = df[['LONGITUDE', 'LATITUDE', 'PRICE', 'QUALIFIED']].dropna() \
         .query('QUALIFIED == "Q"')
     subset['PRICE ($)'] = subset['PRICE']
@@ -229,7 +228,7 @@ def plot_price_by_coordinate(df: pd.DataFrame):
 
 
 def plot_count_by_coordinate(df: pd.DataFrame):
-    print('Plotting num of properties by coordinate | QUALIFIED == Q')
+    print('Plotting num of properties by coordinate')
     subset = df[['LONGITUDE', 'LATITUDE', 'PRICE', 'QUALIFIED']].dropna() \
         .query('QUALIFIED == "Q"')
 
@@ -303,6 +302,82 @@ def compute_correlation_price_vs_longitude(df):
     pass
 
 
+def plots_by_build_date(df):
+    def plot_all():
+        subset = df[['AYB', 'PRICE']].dropna().groupby('AYB').agg('mean').sort_values('AYB')
+        subset['Build Date'] = subset.index
+
+        plot = subset.plot.line(
+            x='Build Date',
+            y='PRICE',
+            figsize=(9, 5),
+            title='Build Date vs Mean Sale Price',
+            grid=True,
+            legend=True
+        )
+        plot.minorticks_on()
+
+        plot.set_ylabel('Price ($) (in 10-millions)')
+        plot.set_xlabel('Build Year')
+        fig = plot.get_figure()
+
+        fig.savefig('price_over_time_by_build_date.pdf')
+        fig.savefig('price_over_time_by_build_date.png', dpi=300)
+        plt.show()
+
+    def plot_nineties():
+        df1 = df[df[['PRICE', 'AYB']].apply(np.isclose, b=1990, atol=10).any(1)]
+        df_age1 = df1[['AYB', 'PRICE']].groupby('AYB').agg('mean').sort_values('AYB')
+        df_age2 = df_age1.drop(df_age1.index[[0, 1]])
+        df_age2.reset_index()
+        hst2 = df_age2.plot()
+        hst2.set_xlabel("Year")
+        hst2.set_title('1980-2000')
+        fig = hst2.get_figure()
+        fig.savefig('price_over_time_by_build_date_1980-2000.png', dpi=300)
+        fig.savefig('price_over_time_by_build_date_1980-2000.pdf')
+        plt.show()
+
+    plot_all()
+    plot_nineties()
+
+
+def plots_price_frequencies(df):
+    def plot_all():
+        df_age = df[['AYB', 'PRICE']].groupby('AYB').agg('mean').sort_values('AYB')
+
+        plot = df_age.PRICE.hist()
+
+        plot.set_xlabel('Price')
+        plot.set_title('Price frequency in general')
+        plot.set_ylabel('Number of properties')
+
+        fig = plot.get_figure()
+        fig.savefig('price_freq.png', dpi=300)
+        fig.savefig('price_freq.pdf')
+        plt.show()
+
+    def plot_nineties():
+        df1 = df[df[['PRICE', 'AYB']].apply(np.isclose, b=1990, atol=10).any(1)]
+        df_age1 = df1[['AYB', 'PRICE']].groupby('AYB').agg('mean').sort_values('AYB')
+        df_age2 = df_age1.drop(df_age1.index[[0, 1]])
+        df_age3 = df_age2.reset_index()
+
+        plot = df_age3.PRICE.hist(color=(0.5, 0.1, 0.5, 0.6))
+
+        plot.set_xlabel('Price')
+        plot.set_title("Price frequency 1980-2000")
+        plot.set_ylabel('Number of properties')
+
+        fig = plot.get_figure()
+        fig.savefig('price_freq80.png', dpi=300)
+        fig.savefig('price_freq80.pdf')
+        plt.show()
+
+    plot_all()
+    plot_nineties()
+
+
 def main():
     df = pd.read_csv('DC_Properties.csv')
 
@@ -314,6 +389,9 @@ def main():
     plot_count_by_coordinate(df)
     plot_adjusted_price_over_time(df)
     compute_correlation_price_vs_longitude(df)
+
+    plots_by_build_date(df)
+    plots_price_frequencies(df)
     print('Done creating the plots')
 
 
