@@ -90,11 +90,12 @@ def remove_placeholders(df, column):
 
 
 def scatter_column(df, column):
-    plt.scatter(df['PRICE'], df[column])
+    plt.scatter(df[column], df['PRICE'])
     plt.title('The relation between Price and ' + column)
-    plt.xlabel('Price')
-    plt.ylabel(column)
-    plt.savefig('scatter.pdf')
+    plt.xlabel(column)
+    plt.ylabel('Price')
+    name = column + '.pdf'
+    plt.savefig(name)
     plt.close()
     None
 
@@ -183,7 +184,7 @@ def main():
     
     regress(df['PRICE'], selector)
     
-    
+    scatter_column(df, 'Square')
     
     y = df['PRICE']
     x = df['LANDAREA']
@@ -206,6 +207,10 @@ def main():
     print("cor (price, condition):")
     print(cor)
     
+    x = df['ROOMS']
+    cor, p = correlate(y, x)
+    print("cor (price, rooms):")
+    print(cor)
     
     
     
