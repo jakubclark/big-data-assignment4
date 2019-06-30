@@ -1,6 +1,10 @@
 import numpy as np
 import pandas as pd
+
+import matplotlib.patches as mpatches
+
 from matplotlib import pyplot as plt
+from scipy.stats import pearsonr, kendalltau
 
 
 def plot_price_by_grade(df: pd.DataFrame):
@@ -86,28 +90,69 @@ def plot_price_by_quadrant(df: pd.DataFrame):
     plt.show()
 
 def plot_area_by_neighbourhood(df: pd.DataFrame):
+    #df = df.sort_values('QUADRANT')
     groups = df.groupby('ASSESSMENT_NBHD')
 
     mean = {}
 
+    colors = {
+        'NW': 'red',
+        'NE': 'blue',
+        'SW': 'green',
+        'SE': 'black'
+    }
+
+    red_patch = mpatches.Patch(color='red', label='NW')
+    blue_patch = mpatches.Patch(color='blue', label='NE')
+    green_patch = mpatches.Patch(color='green', label='SW')
+    black_patch = mpatches.Patch(color='black', label='SE')
+
+    handles = [red_patch, blue_patch, green_patch, black_patch]
+    quadrant_legend = ['NW', 'NE', 'SW', 'SE']
+
     nbhd_labels = []
 
+    area_colors = []
+
+    new_df = pd.DataFrame(columns=['QUADRANT', 'MEAN_LIVING_GBA'])
+
     for neighbourhood, props in groups:
-        nbhd_labels.append(neighbourhood)
+        quadrant = props['QUADRANT'].iloc[0]
         living_gba: pd.Series = props['LIVING_GBA']
         living_gba = living_gba.dropna()
-        mean[neighbourhood] = living_gba.mean()
+        mean_living_gba = living_gba.mean()
+        if type(mean_living_gba) is not float:
+            mean[neighbourhood] = (mean_living_gba, quadrant)
+            nbhd_labels.append(neighbourhood)
+            area_colors.append(colors[quadrant])
 
     x_pos = np.arange(len(nbhd_labels))
 
-    mean_areas = [mean[nbhd] for nbhd in nbhd_labels]
+    mean_areas = [mean[nbhd][0] for nbhd in nbhd_labels]
+
+    mean_price = {}
+
+    for neighbourhood, props in groups:
+        price: pd.Series = props['PRICE']
+        price = price.dropna()
+        sum_price = sum(price)
+        len_price = len(price)
+        if len_price != 0:
+            mean_price[neighbourhood] = sum_price / len_price
+
+    mean_prices = [mean_price[nbhd] for nbhd in nbhd_labels]
+
+    area_price = sorted(list(zip(mean_prices, mean_areas)), key=lambda x: x[1])
+
+
+    print(pearsonr(mean_prices, mean_areas))
 
     fig, ax = plt.subplots()
 
-    ax.bar(x_pos, mean_areas)
+    ax.bar(x_pos, mean_areas, align='center', color=area_colors)
 
     ax.set_axisbelow(True)
-    ax.grid(linestyle='-', linewidth='0.5', color='black', which='both')
+    ax.grid(linestyle='-', linewidth='0.2', color='black', which='both')
 
     minor_yticks = np.arange(0, 3000, 100)
     major_yticks = np.arange(0, 3000, 100)
@@ -117,14 +162,31 @@ def plot_area_by_neighbourhood(df: pd.DataFrame):
     ax.set_xticks(x_pos)
     ax.set_xticklabels(nbhd_labels)
 
-    plt.xticks(rotation=45)
+    plt.xticks(rotation=90)
 
-    ax.set_xlabel('Sub Neighbourhood')
+    # Legend
+    plt.legend(handles=handles, loc=1)
+
+    ax.set_xlabel('Neighbourhoods')
     ax.set_ylabel('Mean Area (Sq Ft)')
     ax.set_title('Mean Area By Neighbourhood')
 
     fig.savefig('mean_area_by_neighbourhood.pdf')
     plt.show()
+
+def plot_area_price_correlation(df: pd.DataFrame):
+    
+    mean_price = {}
+
+    for neighbourhood, props in groups:
+        price: pd.Series = props['PRICE']
+        price = price.dropna()
+        sum_price = sum(price)
+        len_price = len(price)
+        if len_price != 0:
+            mean_price[neighbourhood] = sum_price / len_price
+
+    mean_prices = [mean_price[nbhd] for nbhd in nbhd_labels]
 
 
 def plot_price_over_time(df):
@@ -253,12 +315,12 @@ def plot_count_heatmap(df: pd.DataFrame):
 
 def main():
     df = pd.read_csv('DC_Properties.csv')
-    plot_price_by_grade(df)
-    plot_price_by_quadrant(df)
+    #plot_price_by_grade(df)
+    #plot_price_by_quadrant(df)
     plot_area_by_neighbourhood(df)
-    plot_price_over_time(df)
-    plot_price_heatmap(df)
-    plot_count_heatmap(df)
+    #plot_price_over_time(df)
+    #plot_price_heatmap(df)
+    #plot_count_heatmap(df)
 
 
 if __name__ == '__main__':
